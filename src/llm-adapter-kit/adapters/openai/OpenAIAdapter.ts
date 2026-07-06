@@ -22,14 +22,22 @@ export class OpenAIAdapter extends BaseAdapter {
   
   private client: OpenAI;
 
-  constructor() {
-    super('OPENAI_API_KEY', 'gpt-4o');
-    
+  constructor(model?: string, apiKey?: string) {
+    super('OPENAI_API_KEY', model || 'gpt-4o', undefined, apiKey);
+    this.createClient();
+  }
+
+  private createClient(): void {
     this.client = new OpenAI({
       apiKey: this.apiKey,
       organization: process.env.OPENAI_ORG_ID,
-      project: process.env.OPENAI_PROJECT_ID
+      project: process.env.OPENAI_PROJECT_ID,
+      dangerouslyAllowBrowser: true
     });
+  }
+
+  protected onApiKeyChanged(): void {
+    this.createClient();
   }
 
   async generateUncached(prompt: string, options?: GenerateOptions): Promise<LLMResponse> {

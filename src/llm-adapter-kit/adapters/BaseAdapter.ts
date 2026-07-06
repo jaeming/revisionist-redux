@@ -27,13 +27,9 @@ export abstract class BaseAdapter {
   protected config: ProviderConfig;
   protected cache!: BaseCache<LLMResponse>;
 
-  constructor(envKeyName: string, defaultModel: string, baseUrl?: string) {
-    this.apiKey = process.env[envKeyName] || '';
+  constructor(envKeyName: string, defaultModel: string, baseUrl?: string, apiKey?: string) {
+    this.apiKey = apiKey || process.env[envKeyName] || '';
     this.currentModel = defaultModel;
-    
-    if (!this.apiKey) {
-      console.warn(`⚠️ ${envKeyName} not found in environment variables`);
-    }
 
     this.config = {
       apiKey: this.apiKey,
@@ -42,6 +38,19 @@ export abstract class BaseAdapter {
 
     this.validateConfiguration();
   }
+
+  /**
+   * Update the API key after construction (e.g. when the user edits settings)
+   * and let the adapter rebuild any SDK client that captured the old key.
+   */
+  setApiKey(apiKey: string): void {
+    this.apiKey = apiKey || '';
+    this.config.apiKey = this.apiKey;
+    this.onApiKeyChanged();
+  }
+
+  /** Override in adapters whose SDK client captures the key at construction */
+  protected onApiKeyChanged(): void {}
 
   protected initializeCache(cacheConfig?: any): void {
     const cacheName = `${this.name}-responses`;
@@ -186,12 +195,10 @@ export abstract class BaseAdapter {
 
   // Helper methods
   protected validateConfiguration(): void {
+    // Do not throw here: inside Obsidian the key arrives from plugin settings
+    // after construction, never from environment variables.
     if (!this.apiKey) {
-      throw new LLMProviderError(
-        `API key not configured for ${this.name}`,
-        this.name,
-        'MISSING_API_KEY'
-      );
+      console.warn(`API key not configured yet for ${this.name}`);
     }
   }
 

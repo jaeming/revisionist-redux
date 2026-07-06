@@ -43,20 +43,28 @@ export class GroqAdapter extends BaseAdapter {
   
   private client: Groq;
 
-  constructor(model?: string) {
-    super('GROQ_API_KEY', model || GROQ_DEFAULT_MODEL);
-    
-    // Initialize Groq client with official SDK
-    this.client = new Groq({
-      apiKey: this.apiKey,
-      timeout: 120000, // 2 minutes for complex requests
-      maxRetries: 3
-    });
-    
+  constructor(model?: string, apiKey?: string) {
+    super('GROQ_API_KEY', model || GROQ_DEFAULT_MODEL, undefined, apiKey);
+
+    this.createClient();
+
     this.initializeCache({
       maxSize: 2000, // Larger cache for fast responses
       defaultTTL: 7200000 // 2 hours - longer TTL for stable results
     });
+  }
+
+  private createClient(): void {
+    this.client = new Groq({
+      apiKey: this.apiKey,
+      timeout: 120000, // 2 minutes for complex requests
+      maxRetries: 3,
+      dangerouslyAllowBrowser: true
+    });
+  }
+
+  protected onApiKeyChanged(): void {
+    this.createClient();
   }
 
   async generateUncached(prompt: string, options?: GenerateOptions): Promise<LLMResponse> {

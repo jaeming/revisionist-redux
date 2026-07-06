@@ -21,15 +21,28 @@ export class AnthropicAdapter extends BaseAdapter {
   
   private client: Anthropic;
 
-  constructor(model?: string) {
-    super('ANTHROPIC_API_KEY', model || 'claude-3-5-sonnet-20241022');
-    
+  constructor(model?: string, apiKey?: string) {
+    super('ANTHROPIC_API_KEY', model || 'claude-sonnet-4-5', undefined, apiKey);
+
+    this.createClient();
+    this.initializeCache();
+  }
+
+  private createClient(): void {
     this.client = new Anthropic({
       apiKey: this.apiKey,
-      baseURL: this.baseUrl
+      baseURL: this.baseUrl,
+      // Obsidian's renderer is a browser-like environment; these opt in to
+      // direct API access from it (safe here: the key lives on this machine).
+      dangerouslyAllowBrowser: true,
+      defaultHeaders: {
+        'anthropic-dangerous-direct-browser-access': 'true'
+      }
     });
-    
-    this.initializeCache();
+  }
+
+  protected onApiKeyChanged(): void {
+    this.createClient();
   }
 
   async generateUncached(prompt: string, options?: GenerateOptions): Promise<LLMResponse> {

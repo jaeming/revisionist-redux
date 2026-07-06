@@ -15,7 +15,10 @@ export { OpenRouterAdapter } from './openrouter/OpenRouterAdapter';
 export { RequestyAdapter } from './requesty/RequestyAdapter';
 export { GroqAdapter } from './groq/GroqAdapter';
 export { PerplexityAdapter } from './perplexity/PerplexityAdapter';
-// export { OllamaAdapter } from './OllamaAdapter';  // Not implemented yet
+export { ClaudeCodeAdapter } from './cli/ClaudeCodeAdapter';
+export { CodexCLIAdapter } from './cli/CodexCLIAdapter';
+export { CustomCLIAdapter } from './cli/CustomCLIAdapter';
+export { OpenAICompatibleAdapter } from './openai-compatible/OpenAICompatibleAdapter';
 
 // Model registry and cost calculation
 export * from './modelTypes';
@@ -31,34 +34,53 @@ import { OpenRouterAdapter } from './openrouter/OpenRouterAdapter';
 import { RequestyAdapter } from './requesty/RequestyAdapter';
 import { GroqAdapter } from './groq/GroqAdapter';
 import { PerplexityAdapter } from './perplexity/PerplexityAdapter';
-// import { OllamaAdapter } from './OllamaAdapter';  // Not implemented yet
-import { SupportedProvider, LLMProviderError } from './types';
+import { ClaudeCodeAdapter } from './cli/ClaudeCodeAdapter';
+import { CodexCLIAdapter } from './cli/CodexCLIAdapter';
+import { CustomCLIAdapter } from './cli/CustomCLIAdapter';
+import { OpenAICompatibleAdapter } from './openai-compatible/OpenAICompatibleAdapter';
+import { SupportedProvider, AdapterFactoryConfig, LLMProviderError } from './types';
 
 /**
  * Factory function to create adapter instances
  */
-export function createAdapter(provider: SupportedProvider, model?: string): BaseAdapter {
+export function createAdapter(
+  provider: SupportedProvider,
+  model?: string,
+  config?: AdapterFactoryConfig
+): BaseAdapter {
+  const setKey = (adapter: BaseAdapter): BaseAdapter => {
+    if (config?.apiKey) adapter.setApiKey(config.apiKey);
+    return adapter;
+  };
+
   switch (provider.toLowerCase()) {
     case 'openai':
-      return new OpenAIAdapter();
+      return setKey(new OpenAIAdapter(model));
     case 'google':
     case 'gemini':
-      return new GoogleAdapter(model);
+      return setKey(new GoogleAdapter(model));
     case 'anthropic':
     case 'claude':
-      return new AnthropicAdapter(model);
+      return setKey(new AnthropicAdapter(model));
     case 'mistral':
-      return new MistralAdapter(model);
+      return setKey(new MistralAdapter(model));
     case 'openrouter':
-      return new OpenRouterAdapter(model);
+      return setKey(new OpenRouterAdapter(model));
     case 'requesty':
-      return new RequestyAdapter(model);
+      return setKey(new RequestyAdapter(model));
     case 'groq':
-      return new GroqAdapter(model);
+      return setKey(new GroqAdapter(model));
     case 'perplexity':
-      return new PerplexityAdapter(model);
-    // case 'ollama':
-    //   return new OllamaAdapter(model);
+      return setKey(new PerplexityAdapter(model));
+    case 'claude-code':
+      return new ClaudeCodeAdapter(model, config?.cli);
+    case 'codex-cli':
+      return new CodexCLIAdapter(model, config?.cli);
+    case 'custom-cli':
+      return new CustomCLIAdapter(model, config?.cli);
+    case 'openai-compatible':
+    case 'ollama':
+      return new OpenAICompatibleAdapter(model, config?.baseUrl, config?.apiKey);
     default:
       throw new LLMProviderError(
         `Unsupported provider: ${provider}`,
@@ -72,7 +94,10 @@ export function createAdapter(provider: SupportedProvider, model?: string): Base
  * Get all available providers
  */
 export function getAvailableProviders(): SupportedProvider[] {
-  return ['openai', 'google', 'anthropic', 'mistral', 'openrouter', 'requesty', 'groq', 'perplexity'];
+  return [
+    'openai', 'google', 'anthropic', 'mistral', 'openrouter', 'requesty', 'groq', 'perplexity',
+    'claude-code', 'codex-cli', 'custom-cli', 'openai-compatible'
+  ];
 }
 
 /**

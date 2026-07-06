@@ -1,10 +1,8 @@
 // src/settings/settingsTab.ts
 
-import { App, PluginSettingTab, Setting, Notice } from 'obsidian';
-import { AIProvider, SettingsService } from './settings';
+import { App, Platform, PluginSettingTab, Setting, Notice } from 'obsidian';
+import { AIProvider, CLI_PROVIDERS, SettingsService } from './settings';
 import { ModelRegistry } from '../llm-adapter-kit/adapters/ModelRegistry';
-import { ModelSpec } from '../llm-adapter-kit/adapters/modelTypes';
-import { createAdapter } from '../llm-adapter-kit/adapters';
 
 export class SettingTab extends PluginSettingTab {
     private settingsService: SettingsService;
@@ -20,9 +18,9 @@ export class SettingTab extends PluginSettingTab {
         const { containerEl } = this;
         containerEl.empty();
 
-        // Remove the top-level heading
         this.addProviderSelection(containerEl);
         this.addProviderSpecificSettings(containerEl);
+        this.addModelSettings(containerEl);
         this.addDefaultSettings(containerEl);
     }
 
@@ -31,17 +29,18 @@ export class SettingTab extends PluginSettingTab {
 
         new Setting(containerEl)
             .setName('AI provider')
-            .setDesc('Select which AI provider to use')
+            .setDesc('CLI providers use your existing tool login (no API key, desktop only)')
             .addDropdown(dropdown => {
                 Object.values(AIProvider).forEach(provider => {
+                    if (CLI_PROVIDERS.includes(provider) && !Platform.isDesktop) return;
                     dropdown.addOption(provider, this.getProviderDisplayName(provider));
                 });
-                
+
                 dropdown
                     .setValue(settings.provider)
                     .onChange(async (value) => {
                         await this.settingsService.updateSetting('provider', value as AIProvider);
-                        // Refresh the settings display to show provider-specific settings
+                        this.plugin.updateAdapterConfig();
                         this.display();
                     });
             });
@@ -49,11 +48,27 @@ export class SettingTab extends PluginSettingTab {
 
     private addProviderSpecificSettings(containerEl: HTMLElement): void {
         const settings = this.settingsService.getSettings();
+        const provider = settings.provider;
 
-        // Add API key setting for all providers
-        this.addApiKeySettings(containerEl, settings.provider);
-        
-        // Add test connection button
+        switch (provider) {
+            case AIProvider.ClaudeCode:
+                this.addCLISettings(containerEl, 'claudeCode', 'claude',
+                    'Path to the claude binary. Leave empty to search PATH and common install locations.');
+                break;
+            case AIProvider.CodexCLI:
+                this.addCLISettings(containerEl, 'codexCli', 'codex',
+                    'Path to the codex binary. Leave empty to search PATH, common locations, and the Codex app bundle.');
+                break;
+            case AIProvider.CustomCLI:
+                this.addCustomCLISettings(containerEl);
+                break;
+            case AIProvider.OpenAICompatible:
+                this.addOpenAICompatibleSettings(containerEl);
+                break;
+            default:
+                this.addApiKeySettings(containerEl, provider);
+        }
+
         new Setting(containerEl)
             .addButton(button => {
                 button
@@ -64,10 +79,118 @@ export class SettingTab extends PluginSettingTab {
             });
     }
 
+    private addCLISettings(
+        containerEl: HTMLElement,
+        settingsKey: 'claudeCode' | 'codexCli',
+        binaryName: string,
+        pathDesc: string
+    ): void {
+        const settings = this.settingsService.getSettings();
+
+        new Setting(containerEl)
+            .setName(`${binaryName} binary path`)
+            .setDesc(pathDesc)
+            .addText(text => {
+                text
+                    .setPlaceholder(`auto-detect ${binaryName}`)
+                    .setValue(settings[settingsKey].binaryPath)
+                    .onChange(async (value) => {
+                        await this.settingsService.updateNestedSetting(settingsKey, 'binaryPath', value.trim());
+                        this.plugin.updateAdapterConfig();
+                    });
+            });
+
+        new Setting(containerEl)
+            .setName('Extra arguments')
+            .setDesc('Optional additional CLI flags, space-separated')
+            .addText(text => {
+                text
+                    .setValue(settings[settingsKey].extraArgs)
+                    .onChange(async (value) => {
+                        await this.settingsService.updateNestedSetting(settingsKey, 'extraArgs', value);
+                        this.plugin.updateAdapterConfig();
+                    });
+            });
+
+        this.addTimeoutSetting(containerEl, settingsKey);
+    }
+
+    private addCustomCLISettings(containerEl: HTMLElement): void {
+        const settings = this.settingsService.getSettings();
+
+        new Setting(containerEl)
+            .setName('Command template')
+            .setDesc('Command to run. {model} is replaced with the model name; the prompt is piped to stdin unless {prompt} appears. Example: ollama run {model}')
+            .addText(text => {
+                text
+                    .setPlaceholder('ollama run {model}')
+                    .setValue(settings.customCli.commandTemplate)
+                    .onChange(async (value) => {
+                        await this.settingsService.updateNestedSetting('customCli', 'commandTemplate', value);
+                        this.plugin.updateAdapterConfig();
+                    });
+                text.inputEl.style.width = '100%';
+            });
+
+        this.addTimeoutSetting(containerEl, 'customCli');
+    }
+
+    private addOpenAICompatibleSettings(containerEl: HTMLElement): void {
+        const settings = this.settingsService.getSettings();
+
+        new Setting(containerEl)
+            .setName('Base URL')
+            .setDesc('OpenAI-compatible endpoint, e.g. http://localhost:11434/v1 (Ollama) or http://localhost:1234/v1 (LM Studio)')
+            .addText(text => {
+                text
+                    .setPlaceholder('http://localhost:11434/v1')
+                    .setValue(settings.openaiCompatible.baseUrl)
+                    .onChange(async (value) => {
+                        await this.settingsService.updateNestedSetting('openaiCompatible', 'baseUrl', value.trim());
+                        this.plugin.updateAdapterConfig();
+                    });
+            });
+
+        new Setting(containerEl)
+            .setName('API key (optional)')
+            .setDesc('Most local servers need none; hosted gateways may require one')
+            .addText(text => {
+                text
+                    .setValue(settings.apiKeys[AIProvider.OpenAICompatible] || '')
+                    .onChange(async (value) => {
+                        await this.settingsService.setApiKey(AIProvider.OpenAICompatible, value);
+                        this.plugin.updateAdapterConfig();
+                    });
+                text.inputEl.type = 'password';
+            });
+    }
+
+    private addTimeoutSetting(
+        containerEl: HTMLElement,
+        settingsKey: 'claudeCode' | 'codexCli' | 'customCli'
+    ): void {
+        const settings = this.settingsService.getSettings();
+
+        new Setting(containerEl)
+            .setName('Timeout (seconds)')
+            .setDesc('How long to wait for the CLI before giving up')
+            .addText(text => {
+                text
+                    .setValue(String(settings[settingsKey].timeoutSeconds))
+                    .onChange(async (value) => {
+                        const parsed = parseInt(value, 10);
+                        if (!isNaN(parsed) && parsed > 0) {
+                            await this.settingsService.updateNestedSetting(settingsKey, 'timeoutSeconds', parsed);
+                            this.plugin.updateAdapterConfig();
+                        }
+                    });
+            });
+    }
+
     private async handleTestConnection(button: any) {
         button.setButtonText('Testing...');
         button.setDisabled(true);
-        
+
         try {
             const success = await this.plugin.testConnection();
             if (success) {
@@ -87,17 +210,15 @@ export class SettingTab extends PluginSettingTab {
         const settings = this.settingsService.getSettings();
         const providerInfo = this.getProviderInfo(provider);
 
-        // API Key Setting
         new Setting(containerEl)
             .setName(`${providerInfo.name} API key`)
             .setDesc(`Enter your ${providerInfo.name} API key`)
             .addText(text => {
                 text
                     .setPlaceholder('Enter API key')
-                    .setValue(settings.apiKeys[provider])
+                    .setValue(settings.apiKeys[provider] || '')
                     .onChange(async (value) => {
                         await this.settingsService.setApiKey(provider, value);
-                        // Immediately update the adapter with new key
                         this.plugin.updateAdapterConfig();
                     });
                 text.inputEl.type = 'password';
@@ -113,7 +234,7 @@ export class SettingTab extends PluginSettingTab {
     }
 
     private getProviderInfo(provider: AIProvider): { name: string; keyUrl: string } {
-        const providerMap = {
+        const providerMap: Partial<Record<AIProvider, { name: string; keyUrl: string }>> = {
             [AIProvider.OpenRouter]: { name: 'OpenRouter', keyUrl: 'https://openrouter.ai/keys' },
             [AIProvider.OpenAI]: { name: 'OpenAI', keyUrl: 'https://platform.openai.com/api-keys' },
             [AIProvider.Anthropic]: { name: 'Anthropic', keyUrl: 'https://console.anthropic.com/settings/keys' },
@@ -126,37 +247,52 @@ export class SettingTab extends PluginSettingTab {
         return providerMap[provider] || { name: provider, keyUrl: '#' };
     }
 
+    private addModelSettings(containerEl: HTMLElement): void {
+        const settings = this.settingsService.getSettings();
+        const provider = settings.provider;
+        const models = ModelRegistry.getProviderModels(provider);
+
+        if (models.length > 0) {
+            new Setting(containerEl)
+                .setName('Model')
+                .setDesc('Select the model to use')
+                .addDropdown(dropdown => {
+                    models.forEach(model => {
+                        dropdown.addOption(model.apiName, model.name);
+                    });
+
+                    const current = settings.models[provider] || models[0].apiName;
+                    dropdown
+                        .setValue(current)
+                        .onChange(async (value) => {
+                            await this.settingsService.setModel(provider, value);
+                            this.plugin.updateAdapterConfig();
+                        });
+                });
+        }
+
+        new Setting(containerEl)
+            .setName(models.length > 0 ? 'Custom model (optional)' : 'Model')
+            .setDesc(models.length > 0
+                ? 'Overrides the dropdown when set — use any model ID the provider accepts'
+                : 'Model name to use, e.g. llama3.3 or mistral-nemo')
+            .addText(text => {
+                text
+                    .setPlaceholder(models.length > 0 ? 'leave empty to use dropdown' : 'model name')
+                    .setValue(settings.customModels[provider] || '')
+                    .onChange(async (value) => {
+                        await this.settingsService.setCustomModel(provider, value);
+                        this.plugin.updateAdapterConfig();
+                    });
+            });
+    }
 
     private addDefaultSettings(containerEl: HTMLElement): void {
         const settings = this.settingsService.getSettings();
 
-        // Default Model Selection
-        new Setting(containerEl)
-            .setName('Default model')
-            .setDesc('Select the default model to use')
-            .addDropdown(dropdown => {
-                try {
-                    const providerName = settings.provider.toLowerCase();
-                    const models = ModelRegistry.getProviderModels(providerName);
-                    
-                    models.forEach(model => {
-                        dropdown.addOption(model.apiName, model.name);
-                    });
-                    
-                    dropdown
-                        .setValue(settings.defaultModel)
-                        .onChange(async (value) => {
-                            await this.settingsService.updateSetting('defaultModel', value);
-                        });
-                } catch (error) {
-                    console.warn('Failed to load models for provider:', settings.provider, error);
-                }
-            });
-
-        // Default Temperature Setting
         new Setting(containerEl)
             .setName('Default temperature')
-            .setDesc('Set the default temperature for the AI model (0.0 - 1.0)')
+            .setDesc('Set the default temperature for the AI model (0.0 - 1.0). CLI providers ignore this.')
             .addSlider(slider => {
                 slider
                     .setLimits(0, 1, 0.05)
@@ -168,9 +304,12 @@ export class SettingTab extends PluginSettingTab {
             });
     }
 
-
     private getProviderDisplayName(provider: AIProvider): string {
         const displayNames: Record<AIProvider, string> = {
+            [AIProvider.ClaudeCode]: 'Claude Code (subscription, no API key)',
+            [AIProvider.CodexCLI]: 'OpenAI Codex CLI (subscription, no API key)',
+            [AIProvider.CustomCLI]: 'Custom CLI command',
+            [AIProvider.OpenAICompatible]: 'OpenAI-compatible endpoint (Ollama, LM Studio…)',
             [AIProvider.OpenRouter]: 'OpenRouter',
             [AIProvider.OpenAI]: 'OpenAI',
             [AIProvider.Anthropic]: 'Anthropic (Claude)',

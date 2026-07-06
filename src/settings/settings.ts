@@ -1,9 +1,11 @@
 // src/settings/settings.ts
 
-import { SupportedProvider } from '../llm-adapter-kit/adapters/types';
-
 // Define available providers
 export enum AIProvider {
+    ClaudeCode = 'claude-code',
+    CodexCLI = 'codex-cli',
+    CustomCLI = 'custom-cli',
+    OpenAICompatible = 'openai-compatible',
     OpenRouter = 'openrouter',
     OpenAI = 'openai',
     Anthropic = 'anthropic',
@@ -14,17 +16,38 @@ export enum AIProvider {
     Requesty = 'requesty'
 }
 
+/** Providers that spawn a local process — desktop only, no API key */
+export const CLI_PROVIDERS: AIProvider[] = [
+    AIProvider.ClaudeCode,
+    AIProvider.CodexCLI,
+    AIProvider.CustomCLI
+];
+
+export interface CLIProviderSettings {
+    binaryPath: string;
+    extraArgs: string;
+    timeoutSeconds: number;
+}
+
 /**
  * Plugin settings interface
  */
 export interface PluginSettings {
     provider: AIProvider;
-    apiKeys: Record<AIProvider, string>;
-    defaultModel: string;
+    apiKeys: Record<string, string>;
+    /** Selected model per provider (dropdown value) */
+    models: Record<string, string>;
+    /** Free-text model override per provider; wins over the dropdown when set */
+    customModels: Record<string, string>;
     defaultTemperature: number;
-    lmStudio: {
-        port: string;
-        modelName: string;
+    claudeCode: CLIProviderSettings;
+    codexCli: CLIProviderSettings;
+    customCli: {
+        commandTemplate: string;
+        timeoutSeconds: number;
+    };
+    openaiCompatible: {
+        baseUrl: string;
     };
     debugMode: boolean;
 }
@@ -33,22 +56,32 @@ export interface PluginSettings {
  * Default settings for the plugin
  */
 export const DEFAULT_SETTINGS: PluginSettings = {
-    provider: AIProvider.OpenRouter,
-    apiKeys: {
-        [AIProvider.OpenRouter]: '',
-        [AIProvider.OpenAI]: '',
-        [AIProvider.Anthropic]: '',
-        [AIProvider.Google]: '',
-        [AIProvider.Mistral]: '',
-        [AIProvider.Groq]: '',
-        [AIProvider.Perplexity]: '',
-        [AIProvider.Requesty]: ''
+    provider: AIProvider.ClaudeCode,
+    apiKeys: {},
+    models: {
+        [AIProvider.ClaudeCode]: 'sonnet',
+        [AIProvider.Anthropic]: 'claude-sonnet-4-5',
+        [AIProvider.OpenAI]: 'gpt-4o',
+        [AIProvider.OpenRouter]: 'anthropic/claude-sonnet-4.5'
     },
-    defaultModel: 'anthropic/claude-3.5-sonnet',  // Default to Claude
+    customModels: {},
     defaultTemperature: 0.7,
-    lmStudio: {
-        port: '1234',
-        modelName: 'default'
+    claudeCode: {
+        binaryPath: '',
+        extraArgs: '',
+        timeoutSeconds: 180
+    },
+    codexCli: {
+        binaryPath: '',
+        extraArgs: '',
+        timeoutSeconds: 180
+    },
+    customCli: {
+        commandTemplate: '',
+        timeoutSeconds: 180
+    },
+    openaiCompatible: {
+        baseUrl: 'http://localhost:11434/v1'
     },
     debugMode: false
 };
@@ -66,11 +99,19 @@ export class SettingsService {
     }
 
     /**
-     * Load settings from Obsidian storage
+     * Load settings from Obsidian storage, merging one level deep so new
+     * nested defaults survive upgrades.
      */
     async loadSettings(): Promise<void> {
-        const loadedData = await this.plugin.loadData();
-        this.settings = Object.assign({}, DEFAULT_SETTINGS, loadedData);
+        const loadedData = (await this.plugin.loadData()) || {};
+        const merged: any = { ...DEFAULT_SETTINGS, ...loadedData };
+        for (const key of Object.keys(DEFAULT_SETTINGS) as Array<keyof PluginSettings>) {
+            const defaultValue = DEFAULT_SETTINGS[key];
+            if (defaultValue && typeof defaultValue === 'object' && !Array.isArray(defaultValue)) {
+                merged[key] = { ...defaultValue, ...(loadedData[key] || {}) };
+            }
+        }
+        this.settings = merged;
     }
 
     /**
@@ -91,7 +132,7 @@ export class SettingsService {
      * Update specific setting value
      */
     async updateSetting<K extends keyof PluginSettings>(
-        key: K, 
+        key: K,
         value: PluginSettings[K]
     ): Promise<void> {
         this.settings[key] = value;
@@ -126,28 +167,24 @@ export class SettingsService {
     }
 
     /**
-     * Get LMStudio settings
+     * The model to actually use for a provider: free-text override first,
+     * then the dropdown selection.
      */
-    getLMStudioSettings() {
-        return this.settings.lmStudio;
+    getEffectiveModel(provider?: AIProvider): string {
+        const p = provider || this.settings.provider;
+        const override = (this.settings.customModels[p] || '').trim();
+        if (override) return override;
+        return this.settings.models[p] || '';
     }
 
-    /**
-     * Update LMStudio settings
-     */
-    async updateLMStudioSettings(port: string, modelName: string): Promise<void> {
-        this.settings.lmStudio = {
-            port,
-            modelName
-        };
+    async setModel(provider: AIProvider, model: string): Promise<void> {
+        this.settings.models[provider] = model;
         await this.saveSettings();
     }
 
-    /**
-     * Get default model for current provider
-     */
-    getDefaultModel(): string {
-        return this.settings.defaultModel;
+    async setCustomModel(provider: AIProvider, model: string): Promise<void> {
+        this.settings.customModels[provider] = model;
+        await this.saveSettings();
     }
 
     /**

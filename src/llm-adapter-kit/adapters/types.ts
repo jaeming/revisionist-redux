@@ -136,7 +136,27 @@ export type SupportedProvider =
   | 'requesty'
   | 'groq'
   | 'perplexity'
-  | 'ollama';
+  | 'ollama'
+  | 'claude-code'
+  | 'codex-cli'
+  | 'custom-cli'
+  | 'openai-compatible';
+
+/**
+ * Everything the factory needs to construct a fully configured adapter.
+ * API providers use apiKey; CLI providers use the cli block;
+ * openai-compatible uses baseUrl (+ optional apiKey).
+ */
+export interface AdapterFactoryConfig {
+  apiKey?: string;
+  baseUrl?: string;
+  cli?: {
+    binaryPath?: string;
+    extraArgs?: string[];
+    commandTemplate?: string;
+    timeoutMs?: number;
+  };
+}
 
 export type SupportedModel = 
   // OpenAI

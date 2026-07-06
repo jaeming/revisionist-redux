@@ -51,9 +51,14 @@ export class PerplexityAdapter extends BaseAdapter {
   
   private client: AxiosInstance;
 
-  constructor(model?: string) {
-    super('PERPLEXITY_API_KEY', model || PERPLEXITY_DEFAULT_MODEL);
-    
+  constructor(model?: string, apiKey?: string) {
+    super('PERPLEXITY_API_KEY', model || PERPLEXITY_DEFAULT_MODEL, undefined, apiKey);
+
+    this.createClient();
+    this.initializeCache();
+  }
+
+  private createClient(): void {
     this.client = axios.create({
       baseURL: this.baseUrl,
       headers: this.buildHeaders({
@@ -61,8 +66,10 @@ export class PerplexityAdapter extends BaseAdapter {
       }),
       timeout: 120000 // 2 minutes for search operations
     });
+  }
 
-    this.initializeCache();
+  protected onApiKeyChanged(): void {
+    this.createClient();
   }
 
   async generateUncached(prompt: string, options?: PerplexityOptions): Promise<PerplexityResponse> {

@@ -1,7 +1,7 @@
 {
-    "name": "obsidian-revisionist",
-    "version": "0.3.0",
-    "description": "AI-powered text revision plugin for Obsidian",
+    "name": "revisionist-redux",
+    "version": "0.4.0",
+    "description": "AI-powered text revision plugin for Obsidian with flexible providers (CLI, local, API)",
     "main": "main.js",
     "scripts": {
         "dev": "node esbuild.config.mjs",
@@ -14,7 +14,7 @@
         "ai",
         "revision"
     ],
-    "author": "Synaptic Labs",
+    "author": "Benji Forrest Dalton (fork of Synaptic Labs obsidian-revisionist)",
     "license": "MIT",
     "devDependencies": {
         "@codemirror/language": "^6.0.0",
@@ -30,7 +30,7 @@
         "typescript": "4.7.4"
     },
     "dependencies": {
-        "@anthropic-ai/sdk": "^0.24.3",
+        "@anthropic-ai/sdk": "^0.110.0",
         "@google/generative-ai": "^0.21.0",
         "@mistralai/mistralai": "^0.5.0",
         "axios": "^1.10.0",

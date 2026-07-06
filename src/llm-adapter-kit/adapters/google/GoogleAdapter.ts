@@ -23,11 +23,15 @@ export class GoogleAdapter extends BaseAdapter {
   
   private client: GoogleGenerativeAI;
 
-  constructor(model?: string) {
-    super('GOOGLE_API_KEY', model || 'gemini-2.5-flash');
-    
+  constructor(model?: string, apiKey?: string) {
+    super('GOOGLE_API_KEY', model || 'gemini-2.5-flash', undefined, apiKey);
+
     this.client = new GoogleGenerativeAI(this.apiKey);
     this.initializeCache();
+  }
+
+  protected onApiKeyChanged(): void {
+    this.client = new GoogleGenerativeAI(this.apiKey);
   }
 
   async generateUncached(prompt: string, options?: GenerateOptions): Promise<LLMResponse> {

@@ -7,16 +7,15 @@ import {
     MarkdownView
 } from 'obsidian';
 
-import { SettingsService } from './settings/settings';
+import { SettingsService, AIProvider, PluginSettings } from './settings/settings';
 import { SettingTab } from './settings/settingsTab';
 import { RevisionModal } from './ui/revisionModal';
 import { ResultModal } from './ui/resultModal';
 import { createAdapter } from './llm-adapter-kit/adapters';
-import { SupportedProvider, LLMResponse, GenerateOptions } from './llm-adapter-kit/adapters/types';
+import { SupportedProvider, LLMResponse, GenerateOptions, AdapterFactoryConfig } from './llm-adapter-kit/adapters/types';
 import { ModelRegistry } from './llm-adapter-kit/adapters/ModelRegistry';
-import { ModelSpec } from './llm-adapter-kit/adapters/modelTypes';
 import { BaseAdapter } from './llm-adapter-kit/adapters/BaseAdapter';
-import { AIProvider } from './settings/settings';
+import { CONFIG } from './config';
 
 export default class AIRevisionPlugin extends Plugin {
     private settingsService: SettingsService;
@@ -85,51 +84,66 @@ export default class AIRevisionPlugin extends Plugin {
      */
     private initializeAIAdapter() {
         const settings = this.settingsService.getSettings();
-        
-        // Clean up existing adapter if needed
-        if (this.aiAdapter) {
-        }
 
         try {
-            // Create new adapter based on provider
             const providerName = settings.provider.toLowerCase() as SupportedProvider;
-            this.aiAdapter = createAdapter(providerName, settings.defaultModel);
-            
-            // Configure the adapter with API key if needed
-            if (settings.apiKeys[settings.provider]) {
-                // Set API key in environment for the adapter to pick up
-                this.configureAdapter(settings.provider as AIProvider, settings.apiKeys[settings.provider]);
-            }
+            this.aiAdapter = createAdapter(
+                providerName,
+                this.settingsService.getEffectiveModel(),
+                this.buildAdapterConfig(settings)
+            );
         } catch (error) {
+            console.error('Failed to initialize AI provider:', error);
             new Notice('Failed to initialize AI provider. Check console for details.');
         }
     }
 
     /**
-     * Configure adapter with API key
+     * Assemble the provider-specific configuration for the adapter factory
      */
-    private configureAdapter(provider: AIProvider, apiKey: string) {
-        // Set API key in the adapter's config
-        if (this.aiAdapter && 'apiKey' in this.aiAdapter) {
-            (this.aiAdapter as any).apiKey = apiKey;
+    private buildAdapterConfig(settings: PluginSettings): AdapterFactoryConfig {
+        const splitArgs = (raw: string): string[] =>
+            raw.trim() ? raw.trim().split(/\s+/) : [];
+
+        switch (settings.provider) {
+            case AIProvider.ClaudeCode:
+                return {
+                    cli: {
+                        binaryPath: settings.claudeCode.binaryPath,
+                        extraArgs: splitArgs(settings.claudeCode.extraArgs),
+                        timeoutMs: settings.claudeCode.timeoutSeconds * 1000
+                    }
+                };
+            case AIProvider.CodexCLI:
+                return {
+                    cli: {
+                        binaryPath: settings.codexCli.binaryPath,
+                        extraArgs: splitArgs(settings.codexCli.extraArgs),
+                        timeoutMs: settings.codexCli.timeoutSeconds * 1000
+                    }
+                };
+            case AIProvider.CustomCLI:
+                return {
+                    cli: {
+                        commandTemplate: settings.customCli.commandTemplate,
+                        timeoutMs: settings.customCli.timeoutSeconds * 1000
+                    }
+                };
+            case AIProvider.OpenAICompatible:
+                return {
+                    baseUrl: settings.openaiCompatible.baseUrl,
+                    apiKey: settings.apiKeys[AIProvider.OpenAICompatible]
+                };
+            default:
+                return { apiKey: settings.apiKeys[settings.provider] };
         }
     }
 
     /**
-     * Update adapter configuration with current settings
+     * Settings changed: rebuild the adapter so every option takes effect
      */
     updateAdapterConfig() {
-        const settings = this.settingsService.getSettings();
-        
-        if (!this.aiAdapter) {
-            this.initializeAIAdapter();
-            return;
-        }
-
-        // Update API key for current provider
-        if (settings.apiKeys[settings.provider]) {
-            this.configureAdapter(settings.provider as AIProvider, settings.apiKeys[settings.provider]);
-        }
+        this.initializeAIAdapter();
     }
 
     /**
@@ -212,33 +226,38 @@ export default class AIRevisionPlugin extends Plugin {
             async (result) => {
                 try {
                     new Notice('Generating revision...');
-                    
-                    // Create the prompt with context
-                    const contextualPrompt = `Based on the following note content and selected text, ${result.instructions}
 
-Full note content:
-${fullNoteContent}
-
-Selected text to revise:
-${selectedText}
-
-Please provide only the revised version of the selected text.`;
+                    const contextualPrompt = CONFIG.PROMPTS.formatUserPrompt(
+                        result.instructions,
+                        selectedText,
+                        fullNoteContent
+                    );
 
                     const generateOptions: GenerateOptions = {
                         model: result.model,
                         temperature: result.temperature,
-                        maxTokens: 4096
+                        maxTokens: 4096,
+                        systemPrompt: CONFIG.PROMPTS.SYSTEM,
+                        // Never serve a cached revision — "Retry" must regenerate
+                        disableCache: true
                     };
 
                     const response: LLMResponse = await this.aiAdapter.generate(contextualPrompt, generateOptions);
 
-                    // Calculate cost if tokens are available
-                    const cost = response.usage ? 
-                        this.calculateApproximateCost({
-                            input: response.usage.promptTokens,
-                            output: response.usage.completionTokens
-                        }, result.model) : 
-                        undefined;
+                    // Prefer real cost reported by the provider (e.g. claude -p),
+                    // fall back to registry-rate estimation
+                    const cost = response.cost
+                        ? {
+                            input: response.cost.inputCost,
+                            output: response.cost.outputCost,
+                            total: response.cost.totalCost
+                        }
+                        : response.usage
+                            ? this.calculateApproximateCost({
+                                input: response.usage.promptTokens,
+                                output: response.usage.completionTokens
+                            }, result.model)
+                            : undefined;
 
                     // Show result modal with cost
                     new ResultModal(

@@ -34,7 +34,7 @@ export class RevisionModal extends Modal {
         const settings = this.settingsService.getSettings();
         this.result = {
             instructions: '',
-            model: settings.defaultModel,
+            model: this.settingsService.getEffectiveModel(),
             temperature: settings.defaultTemperature,
             selectedText: this.selectedText,
             fullNoteContent: this.fullNoteContent  // Store it in result
@@ -87,33 +87,44 @@ export class RevisionModal extends Modal {
                 text.inputEl.rows = 4;
             });
 
-        // Model selection (for OpenRouter and OpenAI)
+        // Model selection: dropdown when the provider has known models,
+        // free-text otherwise (custom CLI, local endpoints)
         const settings = this.settingsService.getSettings();
-        new Setting(contentEl)
-            .setName('AI model')
-            .setDesc('Select the model to use for revision')
-            .addDropdown(dropdown => {
-                this.modelDropdown = dropdown;
-                try {
-                    const providerName = settings.provider.toLowerCase();
-                    const models = ModelRegistry.getProviderModels(providerName);
-                    
+        const models = ModelRegistry.getProviderModels(settings.provider.toLowerCase());
+
+        if (models.length > 0) {
+            new Setting(contentEl)
+                .setName('AI model')
+                .setDesc('Select the model to use for revision')
+                .addDropdown(dropdown => {
+                    this.modelDropdown = dropdown;
                     models.forEach(model => {
                         dropdown.addOption(model.apiName, model.name);
                     });
-                    
+                    // Keep a custom-model override selectable even though it
+                    // isn't in the registry
+                    if (this.result.model && !models.some(m => m.apiName === this.result.model)) {
+                        dropdown.addOption(this.result.model, this.result.model);
+                    }
+
                     dropdown
                         .setValue(this.result.model)
                         .onChange(value => {
                             this.result.model = value;
                         });
-                } catch (error) {
-                    console.warn('Failed to load models for provider:', settings.provider, error);
-                    // Add a fallback option
-                    dropdown.addOption(settings.defaultModel, 'Default Model');
-                    dropdown.setValue(settings.defaultModel);
-                }
-            });
+                });
+        } else {
+            new Setting(contentEl)
+                .setName('AI model')
+                .setDesc('Model name to use for revision')
+                .addText(text => {
+                    text
+                        .setValue(this.result.model)
+                        .onChange(value => {
+                            this.result.model = value.trim();
+                        });
+                });
+        }
 
         // Temperature control
         new Setting(contentEl)

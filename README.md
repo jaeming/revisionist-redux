@@ -1,59 +1,45 @@
-# Revisionist: AI-Powered Text Revision Plugin for Obsidian
+# Revisionist Redux
 
-> **Make your writing shine with AI!** Revisionist provides seamless AI-powered text revision directly within Obsidian. Highlight text, tweak instructions, and get instant, polished suggestions.
+AI-powered text revision for Obsidian, with providers that actually flex.
 
----
+A fork of [obsidian-revisionist](https://github.com/ProfSynapse/obsidian-revisionist) by Synaptic Labs (MIT), rebuilt around one idea: **you should be able to revise text with whatever AI you already have** — a Claude subscription, a ChatGPT plan, a local model, or an API key.
 
-## Features
+## Providers
 
-- **One-Click AI Revisions**: Highlight text and let Revisionist refine it for you.
-- **Customizable Instructions**: Guide the AI with specific directions for revisions.
-- **Mobile and Desktop Friendly**:
-  - Access via the ribbon icon, command palette, or context menu.
-- **Word Count Guidance**: Helps you stay within optimal text limits for better AI performance.
-- **Error Notifications**: Provides clear feedback if settings or inputs need adjustment.
+**Subscription CLIs (no API key, desktop only)**
+- **Claude Code** — spawns `claude -p` using your existing Claude Code login. Reports real cost per revision.
+- **OpenAI Codex CLI** — spawns `codex exec` using your ChatGPT plan OAuth.
+- **Custom CLI** — any command template, e.g. `ollama run {model}`. Prompt is piped to stdin; stdout is the revision.
 
----
+**Local / self-hosted**
+- **OpenAI-compatible endpoint** — Ollama, LM Studio, LiteLLM, vLLM, llama.cpp, or any server speaking `/chat/completions`. Uses Obsidian's CORS-free request layer, so local servers work without extra flags.
 
-## Installation
+**API providers** (from the original, with key handling fixed)
+- Anthropic, OpenAI, Google Gemini, Mistral, Groq, Perplexity, OpenRouter, Requesty
 
-1. Open Obsidian.
-2. Go to **Settings > Community Plugins**.
-3. Search for **Revisionist** in the plugin library.
-4. Click **Install** and then **Enable** the plugin.
-
----
+Every provider supports a **free-text model override**, so new model releases never require a plugin update.
 
 ## Usage
 
-### Revise Your Writing
-1. **Select Text**:
-   - Highlight the text you want to improve.
-2. **Trigger Revision**:
-   - Click the **wand icon** in the ribbon.
-   - Or open the **Command Palette** (Ctrl+P or Cmd+P) and search for "Revise Selected Text."
-   - Or right-click the selected text and choose **Revise with AI**.
-3. **Configure Revision**:
-   - In the revision modal:
-     - Add specific instructions (e.g., "Make this more concise" or "Rewrite for clarity").
-     - Optionally adjust settings like temperature.
-4. **Review Results**:
-   - The plugin will generate a revised version of your text.
-   - You can choose to retry, accept, or modify the revision.
+Select text → right-click → **Revise with AI** (or the command palette / ribbon wand). Give instructions or use a quick preset (Clarify, Trim, Expand, Fix), review the result side-by-side, apply or retry.
 
----
+## Install
 
-## Configuration
+Not in the community plugin directory. Install manually:
 
-1. Open **Settings > Revisionist**.
-2. Select your preferred AI provider (e.g., OpenRouter or LMStudio).
-3. Configure any additional parameters like temperature, model, or API key (if needed).
+1. Build: `npm install && npm run build`
+2. Copy `manifest.json`, `main.js`, and `styles.css` into `<vault>/.obsidian/plugins/revisionist-redux/`
+3. Enable it in **Settings → Community plugins**
 
----
+Or point [BRAT](https://github.com/TfTHacker/obsidian42-brat) at this repo.
 
-## Tips for Best Results
+## Fixes over the original
 
-- **Keep it Short**: Select smaller portions of text (under 800 words) for optimal performance.
-- **Clear Instructions**: Provide specific guidance to the AI for more accurate revisions.
-- **Experiment with Settings**: Adjust parameters like temperature to fine-tune the AI's creativity.
+- API keys are wired into adapters correctly (the original read them from environment variables that don't exist inside Obsidian, so several providers could never authenticate).
+- "Retry" actually regenerates instead of returning the cached identical response.
+- The revision system prompt is actually sent to the model.
+- Anthropic model list updated to real, current model IDs; SDK updated for in-app use.
 
+## License
+
+MIT, same as the original. Original plugin © Synaptic Labs.
