@@ -55,6 +55,23 @@ export abstract class CLIBaseAdapter extends BaseAdapter {
     return this.resolveBinary() !== null;
   }
 
+  async checkAvailability(): Promise<{ ok: boolean; detail: string }> {
+    if (typeof spawn !== 'function') {
+      return { ok: false, detail: 'CLI providers only work on desktop.' };
+    }
+    const binary = this.resolveBinary();
+    if (binary) {
+      return { ok: true, detail: `Found: ${binary}` };
+    }
+    const wanted = this.cliConfig.binaryPath?.trim() || this.defaultBinaryName || 'the configured command';
+    return {
+      ok: false,
+      detail: `Could not find "${wanted}". Searched your PATH, ~/.local/bin, /opt/homebrew/bin, /usr/local/bin` +
+        (this.extraBinaryLocations.length ? `, and ${this.extraBinaryLocations.join(', ')}` : '') +
+        `. Install it, or set the full binary path in the plugin settings.`
+    };
+  }
+
   async getModelPricing(): Promise<CostDetails | null> {
     return null; // subscription-billed; real cost may come from CLI output
   }

@@ -192,14 +192,14 @@ export class SettingTab extends PluginSettingTab {
         button.setDisabled(true);
 
         try {
-            const success = await this.plugin.testConnection();
-            if (success) {
-                new Notice('Connection test successful!');
+            const result = await this.plugin.testConnectionDetailed();
+            if (result.ok) {
+                new Notice(`Connection OK — ${result.detail}`);
             } else {
-                new Notice('Connection test failed. Please check your settings.');
+                new Notice(`Connection failed — ${result.detail}`, 15000);
             }
         } catch (error) {
-            new Notice(`Connection test error: ${error.message}`);
+            new Notice(`Connection test error: ${error.message}`, 15000);
         } finally {
             button.setButtonText('Test connection');
             button.setDisabled(false);

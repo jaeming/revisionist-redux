@@ -289,6 +289,16 @@ export default class AIRevisionPlugin extends Plugin {
         return await this.isAdapterReady();
     }
 
+    /**
+     * Test the connection and explain the result
+     */
+    async testConnectionDetailed(): Promise<{ ok: boolean; detail: string }> {
+        if (!this.aiAdapter) {
+            return { ok: false, detail: 'No AI provider initialized. Check the plugin settings.' };
+        }
+        return await this.aiAdapter.checkAvailability();
+    }
+
     async onunload() {
         // Cleanup
     }

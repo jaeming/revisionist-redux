@@ -171,13 +171,29 @@ export abstract class BaseAdapter {
     if (!this.apiKey) {
       return false;
     }
-    
+
     try {
       await this.listModels();
       return true;
     } catch (error) {
       console.warn(`Provider ${this.name} unavailable:`, error);
       return false;
+    }
+  }
+
+  /**
+   * Like isAvailable, but says WHY when it fails so the settings UI can
+   * show something actionable instead of a bare "failed".
+   */
+  async checkAvailability(): Promise<{ ok: boolean; detail: string }> {
+    if (!this.apiKey) {
+      return { ok: false, detail: `No API key configured for ${this.name}. Enter one in the plugin settings.` };
+    }
+    try {
+      await this.listModels();
+      return { ok: true, detail: `${this.name} is reachable.` };
+    } catch (error) {
+      return { ok: false, detail: `${this.name}: ${(error as Error).message}` };
     }
   }
 
