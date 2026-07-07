@@ -1,5 +1,7 @@
 // src/settings/settings.ts
 
+import { ModelRegistry } from '../llm-adapter-kit/adapters/ModelRegistry';
+
 // Define available providers
 export enum AIProvider {
     ClaudeCode = 'claude-code',
@@ -174,7 +176,16 @@ export class SettingsService {
         const p = provider || this.settings.provider;
         const override = (this.settings.customModels[p] || '').trim();
         if (override) return override;
-        return this.settings.models[p] || '';
+
+        const stored = this.settings.models[p] || '';
+        // Self-heal: a saved dropdown choice that no longer exists in the
+        // registry (e.g. a retired model name) falls back to the provider's
+        // first option rather than silently sending a dead model ID.
+        const registryModels = ModelRegistry.getProviderModels(p);
+        if (registryModels.length > 0 && !registryModels.some(m => m.apiName === stored)) {
+            return registryModels[0].apiName;
+        }
+        return stored;
     }
 
     async setModel(provider: AIProvider, model: string): Promise<void> {

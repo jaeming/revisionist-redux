@@ -62,18 +62,8 @@ export const CODEX_CLI_MODELS: ModelSpec[] = [
   },
   {
     provider: 'codex-cli',
-    name: 'GPT-5 Codex',
-    apiName: 'gpt-5-codex',
-    contextWindow: 200000,
-    maxTokens: 32000,
-    inputCostPerMillion: 0,
-    outputCostPerMillion: 0,
-    capabilities: cliCaps
-  },
-  {
-    provider: 'codex-cli',
-    name: 'GPT-5',
-    apiName: 'gpt-5',
+    name: 'GPT-5.5',
+    apiName: 'gpt-5.5',
     contextWindow: 200000,
     maxTokens: 32000,
     inputCostPerMillion: 0,

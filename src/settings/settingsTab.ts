@@ -261,7 +261,10 @@ export class SettingTab extends PluginSettingTab {
                         dropdown.addOption(model.apiName, model.name);
                     });
 
-                    const current = settings.models[provider] || models[0].apiName;
+                    const stored = settings.models[provider] || '';
+                    const current = models.some(m => m.apiName === stored)
+                        ? stored
+                        : models[0].apiName;
                     dropdown
                         .setValue(current)
                         .onChange(async (value) => {

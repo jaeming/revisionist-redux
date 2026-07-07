@@ -60,6 +60,16 @@ export class CodexCLIAdapter extends CLIBaseAdapter {
         text = fs.readFileSync(outFile, 'utf8').trim();
       }
       if (!text) {
+        // codex exec exits 0 even when the API rejects the request —
+        // surface its ERROR lines instead of pasting them as a "revision"
+        const errLine = stdout.split('\n').reverse().find(l => l.trim().startsWith('ERROR'));
+        if (errLine) {
+          throw new LLMProviderError(
+            `codex exec failed: ${errLine.trim().slice(0, 300)}`,
+            this.name,
+            'CLI_ERROR'
+          );
+        }
         // Fallback: last non-empty stdout block
         const blocks = stdout.trim().split(/\n{2,}/);
         text = (blocks[blocks.length - 1] || '').trim();
@@ -89,8 +99,7 @@ export class CodexCLIAdapter extends CLIBaseAdapter {
   async listModels(): Promise<ModelInfo[]> {
     return [
       { id: '', name: 'Account default' },
-      { id: 'gpt-5-codex', name: 'GPT-5 Codex' },
-      { id: 'gpt-5', name: 'GPT-5' }
+      { id: 'gpt-5.5', name: 'GPT-5.5' }
     ].map(m => ({
       id: m.id,
       name: m.name,
