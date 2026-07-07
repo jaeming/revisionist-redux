@@ -27,6 +27,9 @@ export class ClaudeCodeAdapter extends CLIBaseAdapter {
     const model = (options?.model || this.currentModel || '').trim();
 
     const args = ['-p', '--output-format', 'json'];
+    // Neutralize any user-configured output style (insight blocks,
+    // conversational framing) — revisions must be paste-ready text only
+    args.push('--settings', '{"outputStyle":"default"}');
     if (model) args.push('--model', model);
     if (options?.systemPrompt) args.push('--system-prompt', options.systemPrompt);
     if (this.cliConfig.extraArgs?.length) args.push(...this.cliConfig.extraArgs);
