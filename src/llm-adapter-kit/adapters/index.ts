@@ -17,6 +17,7 @@ export { GroqAdapter } from './groq/GroqAdapter';
 export { PerplexityAdapter } from './perplexity/PerplexityAdapter';
 export { ClaudeCodeAdapter } from './cli/ClaudeCodeAdapter';
 export { CodexCLIAdapter } from './cli/CodexCLIAdapter';
+export { GeminiCLIAdapter } from './cli/GeminiCLIAdapter';
 export { CustomCLIAdapter } from './cli/CustomCLIAdapter';
 export { OpenAICompatibleAdapter } from './openai-compatible/OpenAICompatibleAdapter';
 
@@ -36,6 +37,7 @@ import { GroqAdapter } from './groq/GroqAdapter';
 import { PerplexityAdapter } from './perplexity/PerplexityAdapter';
 import { ClaudeCodeAdapter } from './cli/ClaudeCodeAdapter';
 import { CodexCLIAdapter } from './cli/CodexCLIAdapter';
+import { GeminiCLIAdapter } from './cli/GeminiCLIAdapter';
 import { CustomCLIAdapter } from './cli/CustomCLIAdapter';
 import { OpenAICompatibleAdapter } from './openai-compatible/OpenAICompatibleAdapter';
 import { SupportedProvider, AdapterFactoryConfig, LLMProviderError } from './types';
@@ -76,6 +78,8 @@ export function createAdapter(
       return new ClaudeCodeAdapter(model, config?.cli);
     case 'codex-cli':
       return new CodexCLIAdapter(model, config?.cli);
+    case 'gemini-cli':
+      return new GeminiCLIAdapter(model, config?.cli);
     case 'custom-cli':
       return new CustomCLIAdapter(model, config?.cli);
     case 'openai-compatible':
@@ -96,7 +100,7 @@ export function createAdapter(
 export function getAvailableProviders(): SupportedProvider[] {
   return [
     'openai', 'google', 'anthropic', 'mistral', 'openrouter', 'requesty', 'groq', 'perplexity',
-    'claude-code', 'codex-cli', 'custom-cli', 'openai-compatible'
+    'claude-code', 'codex-cli', 'gemini-cli', 'custom-cli', 'openai-compatible'
   ];
 }
 

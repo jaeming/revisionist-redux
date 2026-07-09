@@ -167,7 +167,7 @@ export abstract class CLIBaseAdapter extends BaseAdapter {
         clearTimeout(timer);
         if (code !== 0) {
           reject(new LLMProviderError(
-            `${this.name} exited with code ${code}: ${(stderr || stdout).slice(0, 500)}`,
+            `${this.name} exited with code ${code}: ${(stderr || stdout).slice(0, 1500)}`,
             this.name,
             'CLI_ERROR'
           ));

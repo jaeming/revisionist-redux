@@ -73,3 +73,38 @@ export const CODEX_CLI_MODELS: ModelSpec[] = [
 ];
 
 export const CODEX_CLI_DEFAULT_MODEL = '';
+
+export const GEMINI_CLI_MODELS: ModelSpec[] = [
+  {
+    provider: 'gemini-cli',
+    name: 'Account default',
+    apiName: '',
+    contextWindow: 1000000,
+    maxTokens: 65536,
+    inputCostPerMillion: 0,
+    outputCostPerMillion: 0,
+    capabilities: cliCaps
+  },
+  {
+    provider: 'gemini-cli',
+    name: 'Gemini 2.5 Pro',
+    apiName: 'gemini-2.5-pro',
+    contextWindow: 1000000,
+    maxTokens: 65536,
+    inputCostPerMillion: 0,
+    outputCostPerMillion: 0,
+    capabilities: cliCaps
+  },
+  {
+    provider: 'gemini-cli',
+    name: 'Gemini 2.5 Flash',
+    apiName: 'gemini-2.5-flash',
+    contextWindow: 1000000,
+    maxTokens: 65536,
+    inputCostPerMillion: 0,
+    outputCostPerMillion: 0,
+    capabilities: cliCaps
+  }
+];
+
+export const GEMINI_CLI_DEFAULT_MODEL = '';

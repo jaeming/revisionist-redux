@@ -122,6 +122,14 @@ export default class AIRevisionPlugin extends Plugin {
                         timeoutMs: settings.codexCli.timeoutSeconds * 1000
                     }
                 };
+            case AIProvider.GeminiCLI:
+                return {
+                    cli: {
+                        binaryPath: settings.geminiCli.binaryPath,
+                        extraArgs: splitArgs(settings.geminiCli.extraArgs),
+                        timeoutMs: settings.geminiCli.timeoutSeconds * 1000
+                    }
+                };
             case AIProvider.CustomCLI:
                 return {
                     cli: {

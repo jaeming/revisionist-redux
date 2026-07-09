@@ -59,6 +59,10 @@ export class SettingTab extends PluginSettingTab {
                 this.addCLISettings(containerEl, 'codexCli', 'codex',
                     'Path to the codex binary. Leave empty to search PATH, common locations, and the Codex app bundle.');
                 break;
+            case AIProvider.GeminiCLI:
+                this.addCLISettings(containerEl, 'geminiCli', 'gemini',
+                    'Path to the gemini binary. Leave empty to search PATH and common install locations.');
+                break;
             case AIProvider.CustomCLI:
                 this.addCustomCLISettings(containerEl);
                 break;
@@ -81,7 +85,7 @@ export class SettingTab extends PluginSettingTab {
 
     private addCLISettings(
         containerEl: HTMLElement,
-        settingsKey: 'claudeCode' | 'codexCli',
+        settingsKey: 'claudeCode' | 'codexCli' | 'geminiCli',
         binaryName: string,
         pathDesc: string
     ): void {
@@ -167,7 +171,7 @@ export class SettingTab extends PluginSettingTab {
 
     private addTimeoutSetting(
         containerEl: HTMLElement,
-        settingsKey: 'claudeCode' | 'codexCli' | 'customCli'
+        settingsKey: 'claudeCode' | 'codexCli' | 'geminiCli' | 'customCli'
     ): void {
         const settings = this.settingsService.getSettings();
 
@@ -311,6 +315,7 @@ export class SettingTab extends PluginSettingTab {
         const displayNames: Record<AIProvider, string> = {
             [AIProvider.ClaudeCode]: 'Claude Code (subscription, no API key)',
             [AIProvider.CodexCLI]: 'OpenAI Codex CLI (subscription, no API key)',
+            [AIProvider.GeminiCLI]: 'Google Gemini CLI (Google login, no API key)',
             [AIProvider.CustomCLI]: 'Custom CLI command',
             [AIProvider.OpenAICompatible]: 'OpenAI-compatible endpoint (Ollama, LM Studio…)',
             [AIProvider.OpenRouter]: 'OpenRouter',

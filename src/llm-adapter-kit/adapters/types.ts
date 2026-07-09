@@ -139,6 +139,7 @@ export type SupportedProvider =
   | 'ollama'
   | 'claude-code'
   | 'codex-cli'
+  | 'gemini-cli'
   | 'custom-cli'
   | 'openai-compatible';
 

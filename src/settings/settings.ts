@@ -6,6 +6,7 @@ import { ModelRegistry } from '../llm-adapter-kit/adapters/ModelRegistry';
 export enum AIProvider {
     ClaudeCode = 'claude-code',
     CodexCLI = 'codex-cli',
+    GeminiCLI = 'gemini-cli',
     CustomCLI = 'custom-cli',
     OpenAICompatible = 'openai-compatible',
     OpenRouter = 'openrouter',
@@ -22,6 +23,7 @@ export enum AIProvider {
 export const CLI_PROVIDERS: AIProvider[] = [
     AIProvider.ClaudeCode,
     AIProvider.CodexCLI,
+    AIProvider.GeminiCLI,
     AIProvider.CustomCLI
 ];
 
@@ -44,6 +46,7 @@ export interface PluginSettings {
     defaultTemperature: number;
     claudeCode: CLIProviderSettings;
     codexCli: CLIProviderSettings;
+    geminiCli: CLIProviderSettings;
     customCli: {
         commandTemplate: string;
         timeoutSeconds: number;
@@ -74,6 +77,11 @@ export const DEFAULT_SETTINGS: PluginSettings = {
         timeoutSeconds: 180
     },
     codexCli: {
+        binaryPath: '',
+        extraArgs: '',
+        timeoutSeconds: 180
+    },
+    geminiCli: {
         binaryPath: '',
         extraArgs: '',
         timeoutSeconds: 180

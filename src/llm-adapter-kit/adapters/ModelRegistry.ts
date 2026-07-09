@@ -16,7 +16,7 @@ import { OPENROUTER_MODELS, OPENROUTER_DEFAULT_MODEL } from './openrouter/OpenRo
 import { REQUESTY_MODELS, REQUESTY_DEFAULT_MODEL } from './requesty/RequestyModels';
 import { GROQ_MODELS, GROQ_DEFAULT_MODEL } from './groq/GroqModels';
 import { PERPLEXITY_MODELS, PERPLEXITY_DEFAULT_MODEL } from './perplexity/PerplexityModels';
-import { CLAUDE_CODE_MODELS, CODEX_CLI_MODELS } from './cli/CLIModels';
+import { CLAUDE_CODE_MODELS, CODEX_CLI_MODELS, GEMINI_CLI_MODELS } from './cli/CLIModels';
 
 // ModelSpec is imported from ./modelTypes if needed
 
@@ -35,6 +35,7 @@ export const AI_MODELS: Record<string, ModelSpec[]> = {
   perplexity: PERPLEXITY_MODELS,
   'claude-code': CLAUDE_CODE_MODELS,
   'codex-cli': CODEX_CLI_MODELS,
+  'gemini-cli': GEMINI_CLI_MODELS,
   // Model names are free-form for these two; the UI shows a text field.
   'custom-cli': [],
   'openai-compatible': []
