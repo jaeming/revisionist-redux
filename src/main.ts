@@ -130,6 +130,14 @@ export default class AIRevisionPlugin extends Plugin {
                         timeoutMs: settings.geminiCli.timeoutSeconds * 1000
                     }
                 };
+            case AIProvider.AntigravityCLI:
+                return {
+                    cli: {
+                        binaryPath: settings.antigravityCli.binaryPath,
+                        extraArgs: splitArgs(settings.antigravityCli.extraArgs),
+                        timeoutMs: settings.antigravityCli.timeoutSeconds * 1000
+                    }
+                };
             case AIProvider.CustomCLI:
                 return {
                     cli: {

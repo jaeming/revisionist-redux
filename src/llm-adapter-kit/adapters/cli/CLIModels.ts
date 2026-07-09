@@ -108,3 +108,20 @@ export const GEMINI_CLI_MODELS: ModelSpec[] = [
 ];
 
 export const GEMINI_CLI_DEFAULT_MODEL = '';
+
+// Antigravity model IDs vary by account/plan; `agy models` lists them and the
+// free-text field accepts any. Only the safe universal entry ships here.
+export const ANTIGRAVITY_CLI_MODELS: ModelSpec[] = [
+  {
+    provider: 'antigravity-cli',
+    name: 'Account default',
+    apiName: '',
+    contextWindow: 1000000,
+    maxTokens: 65536,
+    inputCostPerMillion: 0,
+    outputCostPerMillion: 0,
+    capabilities: cliCaps
+  }
+];
+
+export const ANTIGRAVITY_CLI_DEFAULT_MODEL = '';

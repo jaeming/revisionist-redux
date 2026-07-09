@@ -63,6 +63,10 @@ export class SettingTab extends PluginSettingTab {
                 this.addCLISettings(containerEl, 'geminiCli', 'gemini',
                     'Path to the gemini binary. Leave empty to search PATH and common install locations.');
                 break;
+            case AIProvider.AntigravityCLI:
+                this.addCLISettings(containerEl, 'antigravityCli', 'agy',
+                    'Path to the agy binary. Leave empty to search PATH and common install locations.');
+                break;
             case AIProvider.CustomCLI:
                 this.addCustomCLISettings(containerEl);
                 break;
@@ -85,7 +89,7 @@ export class SettingTab extends PluginSettingTab {
 
     private addCLISettings(
         containerEl: HTMLElement,
-        settingsKey: 'claudeCode' | 'codexCli' | 'geminiCli',
+        settingsKey: 'claudeCode' | 'codexCli' | 'geminiCli' | 'antigravityCli',
         binaryName: string,
         pathDesc: string
     ): void {
@@ -171,7 +175,7 @@ export class SettingTab extends PluginSettingTab {
 
     private addTimeoutSetting(
         containerEl: HTMLElement,
-        settingsKey: 'claudeCode' | 'codexCli' | 'geminiCli' | 'customCli'
+        settingsKey: 'claudeCode' | 'codexCli' | 'geminiCli' | 'antigravityCli' | 'customCli'
     ): void {
         const settings = this.settingsService.getSettings();
 
@@ -315,7 +319,8 @@ export class SettingTab extends PluginSettingTab {
         const displayNames: Record<AIProvider, string> = {
             [AIProvider.ClaudeCode]: 'Claude Code (subscription, no API key)',
             [AIProvider.CodexCLI]: 'OpenAI Codex CLI (subscription, no API key)',
-            [AIProvider.GeminiCLI]: 'Google Gemini CLI (Google login, no API key)',
+            [AIProvider.GeminiCLI]: 'Google Gemini CLI (legacy — API key or enterprise only)',
+            [AIProvider.AntigravityCLI]: 'Google Antigravity CLI (Google login, no API key)',
             [AIProvider.CustomCLI]: 'Custom CLI command',
             [AIProvider.OpenAICompatible]: 'OpenAI-compatible endpoint (Ollama, LM Studio…)',
             [AIProvider.OpenRouter]: 'OpenRouter',

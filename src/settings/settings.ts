@@ -7,6 +7,7 @@ export enum AIProvider {
     ClaudeCode = 'claude-code',
     CodexCLI = 'codex-cli',
     GeminiCLI = 'gemini-cli',
+    AntigravityCLI = 'antigravity-cli',
     CustomCLI = 'custom-cli',
     OpenAICompatible = 'openai-compatible',
     OpenRouter = 'openrouter',
@@ -24,6 +25,7 @@ export const CLI_PROVIDERS: AIProvider[] = [
     AIProvider.ClaudeCode,
     AIProvider.CodexCLI,
     AIProvider.GeminiCLI,
+    AIProvider.AntigravityCLI,
     AIProvider.CustomCLI
 ];
 
@@ -47,6 +49,7 @@ export interface PluginSettings {
     claudeCode: CLIProviderSettings;
     codexCli: CLIProviderSettings;
     geminiCli: CLIProviderSettings;
+    antigravityCli: CLIProviderSettings;
     customCli: {
         commandTemplate: string;
         timeoutSeconds: number;
@@ -82,6 +85,11 @@ export const DEFAULT_SETTINGS: PluginSettings = {
         timeoutSeconds: 180
     },
     geminiCli: {
+        binaryPath: '',
+        extraArgs: '',
+        timeoutSeconds: 180
+    },
+    antigravityCli: {
         binaryPath: '',
         extraArgs: '',
         timeoutSeconds: 180

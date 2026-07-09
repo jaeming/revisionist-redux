@@ -140,6 +140,7 @@ export type SupportedProvider =
   | 'claude-code'
   | 'codex-cli'
   | 'gemini-cli'
+  | 'antigravity-cli'
   | 'custom-cli'
   | 'openai-compatible';
 
